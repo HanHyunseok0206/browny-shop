@@ -98,12 +98,15 @@ function Cart({ cart, removeFromCart }) {
 }
 
 // 🔧 4. 관리자 (기존과 동일)
+// App.jsx 안에 있는 Admin 함수를 이걸로 교체하세요!
+
 function Admin() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState(null);
   const navigate = useNavigate();
 
+  // ... (handleImageChange 함수는 그대로 둬도 됨, 귀찮으면 아래꺼 복붙) ...
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -134,9 +137,42 @@ function Admin() {
     navigate("/shop");
   };
 
+  // ✨ 여기! 샘플 상품 자동 등록 기능 추가 ✨
+  const addSampleData = async () => {
+    if(!window.confirm("샘플 상품 2개를 추가하시겠습니까?")) return;
+    
+    // 1. 멋진 코트
+    await addDoc(collection(db, "products"), {
+      name: "Signature Wool Coat (Brown)",
+      price: 289000,
+      imageUrl: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=800&auto=format&fit=crop",
+      createdAt: new Date()
+    });
+
+    // 2. 가죽 가방
+    await addDoc(collection(db, "products"), {
+      name: "Minimal Leather Bag",
+      price: 145000,
+      imageUrl: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=800&auto=format&fit=crop",
+      createdAt: new Date()
+    });
+
+    alert("샘플 상품이 등록되었습니다! SHOP으로 이동합니다.");
+    navigate("/shop");
+  };
+
   return (
     <div className="admin-container">
       <h2 className="page-title">PRODUCT UPLOAD</h2>
+      
+      {/* 샘플 추가 버튼 (편의 기능) */}
+      <button onClick={addSampleData} style={{
+        background: "#eee", border: "none", padding: "10px 20px", 
+        marginBottom: "30px", cursor: "pointer", borderRadius: "5px", fontWeight: "bold"
+      }}>
+        🎁 샘플 상품 2개 자동 등록하기
+      </button>
+
       <div className="form-box">
         <input placeholder="Product Name" value={name} onChange={(e)=>setName(e.target.value)} />
         <input type="number" placeholder="Price" value={price} onChange={(e)=>setPrice(e.target.value)} />
@@ -169,7 +205,8 @@ function App() {
     <BrowserRouter>
       <div className="app">
         <nav className="navbar">
-          <Link to="/" className="logo">LOST GARDEN</Link>
+          <Link to="/" className="logo">BROWNY<span className="sub-logo">made by. Jung&Han</span>
+  </Link>
           <div className="menu">
             <Link to="/shop">SHOP</Link>
             <Link to="/cart">CART ({cart.length})</Link> {/* 숫자 표시 */}
