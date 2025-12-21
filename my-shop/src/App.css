@@ -110,3 +110,59 @@ input { padding: 15px; border: 1px solid #ddd; font-size: 14px; outline: none; }
   .home-container { background-position: center; }
   .hero-overlay h1 { font-size: 40px; }
 }
+/* App.css 맨 아래에 추가 */
+
+/* 관리자 페이지 상품 목록 */
+.admin-list {
+  text-align: left;
+  margin-top: 20px;
+}
+
+.admin-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 15px;
+  border: 1px solid #eee;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  background: white;
+}
+
+.admin-item img {
+  width: 50px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 4px;
+  margin-right: 15px;
+}
+
+.admin-info {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.admin-info .name {
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.admin-info .price {
+  font-size: 13px;
+  color: #888;
+}
+
+.delete-btn-small {
+  background: #ff4444;
+  color: white;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.delete-btn-small:hover {
+  background: #cc0000;
+}
