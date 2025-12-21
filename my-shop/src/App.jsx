@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-dom';
 import './App.css';
 import { db } from './firebase'; 
-import { collection, addDoc, getDocs, query, orderBy } from "firebase/firestore";
+import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "firebase/firestore";
 
 // 🏠 1. 홈 화면 (브랜드 대문)
 function Home() {
@@ -100,13 +100,25 @@ function Cart({ cart, removeFromCart }) {
 // 🔧 4. 관리자 (기존과 동일)
 // App.jsx 안에 있는 Admin 함수를 이걸로 교체하세요!
 
+// 🔧 4. 관리자 (등록 + 삭제 기능 추가됨)
 function Admin() {
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState(null);
+  const [products, setProducts] = useState([]); // 관리자용 상품 목록
   const navigate = useNavigate();
 
-  // ... (handleImageChange 함수는 그대로 둬도 됨, 귀찮으면 아래꺼 복붙) ...
+  // 화면 켜지자마자 상품 목록 가져오기
+  const getProducts = async () => {
+    const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
+    const data = await getDocs(q);
+    setProducts(data.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+  };
+
+  useEffect(() => {
+    getProducts();
+  }, []);
+
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -134,51 +146,48 @@ function Admin() {
       name, price: Number(price), imageUrl: image, createdAt: new Date()
     });
     alert("등록 완료!");
-    navigate("/shop");
+    // 입력창 초기화 및 목록 새로고침
+    setName(""); setPrice(""); setImage(null);
+    getProducts();
   };
 
-  // ✨ 여기! 샘플 상품 자동 등록 기능 추가 ✨
-  const addSampleData = async () => {
-    if(!window.confirm("샘플 상품 2개를 추가하시겠습니까?")) return;
-    
-    // 1. 멋진 코트
-    await addDoc(collection(db, "products"), {
-      name: "Signature Wool Coat (Brown)",
-      price: 289000,
-      imageUrl: "https://images.unsplash.com/photo-1591047139829-d91aecb6caea?q=80&w=800&auto=format&fit=crop",
-      createdAt: new Date()
-    });
-
-    // 2. 가죽 가방
-    await addDoc(collection(db, "products"), {
-      name: "Minimal Leather Bag",
-      price: 145000,
-      imageUrl: "https://images.unsplash.com/photo-1548036328-c9fa89d128fa?q=80&w=800&auto=format&fit=crop",
-      createdAt: new Date()
-    });
-
-    alert("샘플 상품이 등록되었습니다! SHOP으로 이동합니다.");
-    navigate("/shop");
+  // 🗑️ 상품 삭제 함수
+  const deleteProduct = async (id) => {
+    if(window.confirm("정말 이 상품을 삭제하시겠습니까?")) {
+      await deleteDoc(doc(db, "products", id));
+      alert("삭제되었습니다.");
+      getProducts(); // 목록 다시 불러오기
+    }
   };
 
   return (
     <div className="admin-container">
-      <h2 className="page-title">PRODUCT UPLOAD</h2>
+      <h2 className="page-title">MANAGER MODE</h2>
       
-      {/* 샘플 추가 버튼 (편의 기능) */}
-      <button onClick={addSampleData} style={{
-        background: "#eee", border: "none", padding: "10px 20px", 
-        marginBottom: "30px", cursor: "pointer", borderRadius: "5px", fontWeight: "bold"
-      }}>
-        🎁 샘플 상품 2개 자동 등록하기
-      </button>
-
+      {/* 상품 등록 구역 */}
       <div className="form-box">
         <input placeholder="Product Name" value={name} onChange={(e)=>setName(e.target.value)} />
         <input type="number" placeholder="Price" value={price} onChange={(e)=>setPrice(e.target.value)} />
         <input type="file" onChange={handleImageChange} accept="image/*" />
         {image && <img src={image} className="preview" alt="preview" />}
-        <button onClick={addProduct} className="black-btn">UPLOAD</button>
+        <button onClick={addProduct} className="black-btn">UPLOAD PRODUCT</button>
+      </div>
+
+      <hr style={{margin: "50px 0", border: "none", borderTop: "1px solid #eee"}}/>
+
+      {/* 상품 관리 리스트 (삭제 구역) */}
+      <h3>📦 재고 관리 ({products.length})</h3>
+      <div className="admin-list">
+        {products.map((item) => (
+          <div key={item.id} className="admin-item">
+            <img src={item.imageUrl} alt="thumb" />
+            <div className="admin-info">
+              <span className="name">{item.name}</span>
+              <span className="price">₩ {item.price.toLocaleString()}</span>
+            </div>
+            <button onClick={() => deleteProduct(item.id)} className="delete-btn-small">삭제</button>
+          </div>
+        ))}
       </div>
     </div>
   );
