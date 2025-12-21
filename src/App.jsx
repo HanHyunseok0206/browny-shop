@@ -27,14 +27,40 @@ function App() {
   }, []);
 
   // 🆕 2. 사진 파일을 선택하면 "아주 긴 글자"로 바꿔주는 마법의 함수
+  // 📸 사진 압축 함수 (고화질 사진을 800px로 줄여서 용량 다이어트!)
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.readAsDataURL(file); // 파일을 읽어서...
-    reader.onloadend = () => {
-      setImage(reader.result); // 다 읽으면 "글자"로 변환해서 저장!
+    reader.readAsDataURL(file); // 1. 파일을 읽고
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        // 2. 가상의 캔버스(도화지)를 만들어서 사진을 그립니다.
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800; // 가로 크기를 800px로 제한 (충분히 잘 보임)
+        
+        // 비율 유지하면서 크기 계산
+        let width = img.width;
+        let height = img.height;
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        // 3. 다시 글자로 변환 (JPEG 형식, 퀄리티 0.7로 압축)
+        // 이렇게 하면 5MB짜리 사진이 50KB로 확 줄어듭니다!
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setImage(dataUrl);
+      };
     };
   };
 
