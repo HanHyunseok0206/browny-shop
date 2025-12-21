@@ -5,7 +5,8 @@ import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "fir
 
 function App() {
   const [diary, setDiary] = useState(""); // 일기 내용
-  const [date, setDate] = useState("");   // 날짜
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+// 이렇게 하면 "2023-12-21" 처럼 날짜가 채워진 상태로 시작함!
   const [list, setList] = useState([]);   // 일기 목록
 
   // 1. 데이터 불러오기 (새로고침 해도 유지됨!)
