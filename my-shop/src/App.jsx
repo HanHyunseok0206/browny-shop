@@ -3,6 +3,13 @@ import { BrowserRouter, Routes, Route, Link, useNavigate } from 'react-router-do
 import './App.css';
 import { db } from './firebase'; 
 import { collection, addDoc, getDocs, deleteDoc, doc, query, orderBy } from "firebase/firestore";
+import { 
+  getAuth, 
+  signInWithEmailAndPassword, 
+  onAuthStateChanged, 
+  signOut 
+} from "firebase/auth";
+import { auth } from './firebase'; // 방금 수정한 firebase.js에서 가져오기
 
 // 🏠 1. 홈 화면 (브랜드 대문)
 function Home() {
@@ -101,25 +108,55 @@ function Cart({ cart, removeFromCart }) {
 // App.jsx 안에 있는 Admin 함수를 이걸로 교체하세요!
 
 // 🔧 4. 관리자 (등록 + 삭제 기능 추가됨)
+// 🔒 4. 보안이 강화된 관리자 페이지
 function Admin() {
+  const [user, setUser] = useState(null); // 로그인한 사람 정보
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  
+  // 기존 상품 관리용 state들
   const [name, setName] = useState("");
   const [price, setPrice] = useState("");
   const [image, setImage] = useState(null);
-  const [products, setProducts] = useState([]); // 관리자용 상품 목록
+  const [products, setProducts] = useState([]);
   const navigate = useNavigate();
 
-  // 화면 켜지자마자 상품 목록 가져오기
+  // 🕵️‍♂️ 로그인 상태 감시자 (새로고침 해도 로그인 유지)
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser); // 로그인 했으면 정보 담고, 안했으면 null
+      if (currentUser) {
+        getProducts(); // 로그인 된 상태라면 상품 목록 가져오기
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // 상품 가져오기 함수 (기존과 동일)
   const getProducts = async () => {
     const q = query(collection(db, "products"), orderBy("createdAt", "desc"));
     const data = await getDocs(q);
     setProducts(data.docs.map(doc => ({ id: doc.id, ...doc.data() })));
   };
 
-  useEffect(() => {
-    getProducts();
-  }, []);
+  // 🔑 로그인 함수
+  const handleLogin = async () => {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      alert("환영합니다, 사장님! 😎");
+    } catch (error) {
+      alert("로그인 실패! 이메일과 비밀번호를 확인하세요.");
+    }
+  };
 
-  const handleImageChange = (e) => {
+  // 🚪 로그아웃 함수
+  const handleLogout = async () => {
+    await signOut(auth);
+    alert("로그아웃 되었습니다.");
+  };
+
+  // 기존 이미지 변환, 상품 등록, 삭제 함수들... (그대로 두거나 복사해오세요)
+  const handleImageChange = (e) => { /* ... 아까 만든 코드 그대로 ... */ 
     const file = e.target.files[0];
     if (!file) return;
     const reader = new FileReader();
@@ -140,17 +177,70 @@ function Admin() {
     };
   };
 
-  const addProduct = async () => {
-    if (!name || !price || !image) return alert("정보를 모두 입력해주세요.");
+  const addProduct = async () => { /* ... 아까 만든 코드 그대로 ... */ 
+     if (!name || !price || !image) return alert("정보를 모두 입력해주세요.");
     await addDoc(collection(db, "products"), {
       name, price: Number(price), imageUrl: image, createdAt: new Date()
     });
     alert("등록 완료!");
-    // 입력창 초기화 및 목록 새로고침
     setName(""); setPrice(""); setImage(null);
     getProducts();
   };
+  
+  const deleteProduct = async (id) => { /* ... 아까 만든 코드 그대로 ... */ 
+    if(window.confirm("정말 이 상품을 삭제하시겠습니까?")) {
+      await deleteDoc(doc(db, "products", id));
+      alert("삭제되었습니다.");
+      getProducts(); 
+    }
+  };
 
+  // 🛑 로그인 안 했을 때 보이는 화면 (도어락)
+  if (!user) {
+    return (
+      <div className="admin-container" style={{maxWidth: "300px", marginTop: "100px"}}>
+        <h2>ADMIN LOGIN</h2>
+        <div className="form-box">
+          <input type="email" placeholder="Email" value={email} onChange={(e)=>setEmail(e.target.value)} />
+          <input type="password" placeholder="Password" value={password} onChange={(e)=>setPassword(e.target.value)} />
+          <button onClick={handleLogin} className="black-btn">LOGIN</button>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ 로그인 했을 때만 보이는 화면 (원래 관리자 페이지)
+  return (
+    <div className="admin-container">
+      <div style={{display:"flex", justifyContent:"space-between", alignItems:"center"}}>
+        <h2 className="page-title">MANAGER MODE</h2>
+        <button onClick={handleLogout} style={{padding:"5px 10px", cursor:"pointer"}}>로그아웃</button>
+      </div>
+      
+      <div className="form-box">
+        <input placeholder="Product Name" value={name} onChange={(e)=>setName(e.target.value)} />
+        <input type="number" placeholder="Price" value={price} onChange={(e)=>setPrice(e.target.value)} />
+        <input type="file" onChange={handleImageChange} accept="image/*" />
+        {image && <img src={image} className="preview" alt="preview" />}
+        <button onClick={addProduct} className="black-btn">UPLOAD PRODUCT</button>
+      </div>
+      <hr style={{margin: "50px 0", border: "none", borderTop: "1px solid #eee"}}/>
+      <h3>📦 재고 관리 ({products.length})</h3>
+      <div className="admin-list">
+        {products.map((item) => (
+          <div key={item.id} className="admin-item">
+            <img src={item.imageUrl} alt="thumb" />
+            <div className="admin-info">
+              <span className="name">{item.name}</span>
+              <span className="price">₩ {item.price.toLocaleString()}</span>
+            </div>
+            <button onClick={() => deleteProduct(item.id)} className="delete-btn-small">삭제</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
   // 🗑️ 상품 삭제 함수
   const deleteProduct = async (id) => {
     if(window.confirm("정말 이 상품을 삭제하시겠습니까?")) {
@@ -191,8 +281,7 @@ function Admin() {
       </div>
     </div>
   );
-}
-
+  
 // 🧭 5. 전체 앱 (상태 관리 & 라우터)
 function App() {
   const [cart, setCart] = useState([]); // 장바구니 상태 (전역 관리)
